@@ -7,13 +7,24 @@
 //
 
 #import "TWAlbumTableViewController.h"
+#import "Album.h"
+#import "TWCoreDataHelper.h"
+#import "TWPhotosCollectionViewController.h"
 
-@interface TWAlbumTableViewController ()
+@interface TWAlbumTableViewController () <UIAlertViewDelegate>
 
 @end
 
 @implementation TWAlbumTableViewController
 
+#pragma mark - Lazy Instantiation
+- (NSMutableArray *)albums
+{
+    if (!_albums)_albums = [[NSMutableArray alloc] init];
+    return _albums;
+}
+
+#pragma mark - View Life Cycle
 - (id)initWithStyle:(UITableViewStyle)style
 {
     self = [super initWithStyle:style];
@@ -21,6 +32,22 @@
         // Custom initialization
     }
     return self;
+}
+
+- (void)viewWillAppear:(BOOL)animated
+{
+    [super viewWillAppear:animated];
+    
+    NSFetchRequest *fetchRequest = [NSFetchRequest fetchRequestWithEntityName:@"Album"];
+    fetchRequest.sortDescriptors = @[[NSSortDescriptor sortDescriptorWithKey:@"date" ascending:YES]];
+    fetchRequest.predicate = nil; // returns all results
+    
+    NSError *error = nil;
+    NSArray *fetchedAlbums = [[TWCoreDataHelper managedObjectContext] executeFetchRequest:fetchRequest error:&error];
+    
+    self.albums = [fetchedAlbums mutableCopy];
+    
+    [self.tableView reloadData];
 }
 
 - (void)viewDidLoad
@@ -44,16 +71,14 @@
 
 - (NSInteger)numberOfSectionsInTableView:(UITableView *)tableView
 {
-#warning Potentially incomplete method implementation.
     // Return the number of sections.
-    return 0;
+    return 1;
 }
 
 - (NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section
 {
-#warning Incomplete method implementation.
     // Return the number of rows in the section.
-    return 0;
+    return [self.albums count];
 }
 
 - (UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath
@@ -62,6 +87,9 @@
     UITableViewCell *cell = [tableView dequeueReusableCellWithIdentifier:CellIdentifier forIndexPath:indexPath];
     
     // Configure the cell...
+    Album *selectedAlbum = self.albums[indexPath.row];
+    cell.textLabel.text = selectedAlbum.name;
+    cell.detailTextLabel.text = [NSString stringWithFormat:@"%@", selectedAlbum.date];
     
     return cell;
 }
@@ -105,16 +133,60 @@
 }
 */
 
-/*
-#pragma mark - Navigation
+#pragma mark - Prepare For Segue
 
 // In a story board-based application, you will often want to do a little preparation before navigation
 - (void)prepareForSegue:(UIStoryboardSegue *)segue sender:(id)sender
 {
-    // Get the new view controller using [segue destinationViewController].
-    // Pass the selected object to the new view controller.
+    NSIndexPath *indexPath = nil;
+    
+    if ([segue.identifier isEqualToString:@"showPhotos"]) {
+        if ([segue.destinationViewController isKindOfClass:[TWPhotosCollectionViewController class]]) {
+            indexPath = [self.tableView indexPathForSelectedRow];
+            
+            TWPhotosCollectionViewController *photosCollectionVC = [segue destinationViewController];
+            photosCollectionVC.album = self.albums[indexPath.row];
+        }
+    }
 }
 
- */
+#pragma mark - Button Actions
+- (IBAction)addAlbumBarButtonItemPressed:(UIBarButtonItem *)sender
+{
+    UIAlertView *newAlbumAlertView = [[UIAlertView alloc] initWithTitle:@"Enter New Album Name" message:nil delegate:self cancelButtonTitle:@"Cancel" otherButtonTitles:@"Add", nil];
+    [newAlbumAlertView setAlertViewStyle:UIAlertViewStylePlainTextInput];
+    [newAlbumAlertView show];
+}
+
+#pragma mark - Helper Methods
+- (Album *)addAlbumWithName:(NSString *)name
+{
+    NSManagedObjectContext *context = [TWCoreDataHelper managedObjectContext];
+    
+    Album *album = [NSEntityDescription insertNewObjectForEntityForName:@"Album" inManagedObjectContext:context];
+    album.name = name;
+    album.date = [NSDate date];
+    
+    NSError *error = nil;
+    
+    if (![context save:&error]) {
+        // Handle the error
+    }
+    
+    return album;
+}
+
+#pragma mark - UIAlertView Delegate
+- (void)alertView:(UIAlertView *)alertView clickedButtonAtIndex:(NSInteger)buttonIndex
+{
+    
+    if (buttonIndex == 1) {
+        NSString *albumName = [alertView textFieldAtIndex:0].text;
+        Album *newAlbum = [self addAlbumWithName:albumName];
+        [self.albums addObject:newAlbum];
+        
+        [self.tableView insertRowsAtIndexPaths:@[[NSIndexPath indexPathForRow:[self.albums count]-1 inSection:0]] withRowAnimation:UITableViewRowAnimationFade];
+    }
+}
 
 @end

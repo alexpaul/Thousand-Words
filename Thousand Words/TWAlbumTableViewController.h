@@ -10,4 +10,6 @@
 
 @interface TWAlbumTableViewController : UITableViewController
 
+@property (nonatomic, strong) NSMutableArray *albums; 
+
 @end

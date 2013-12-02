@@ -10,4 +10,6 @@
 
 @interface TWCoreDataHelper : NSObject
 
++ (NSManagedObjectContext *)managedObjectContext;
+
 @end

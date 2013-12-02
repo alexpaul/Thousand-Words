@@ -8,6 +8,10 @@
 
 #import <UIKit/UIKit.h>
 
+@class Photo;
+
 @interface TWFiltersCollectionViewController : UICollectionViewController
+
+@property (nonatomic, strong) Photo *photo; 
 
 @end

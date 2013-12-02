@@ -10,4 +10,16 @@
 
 @implementation TWCoreDataHelper
 
++ (NSManagedObjectContext *)managedObjectContext
+{
+    NSManagedObjectContext *context = nil;
+    
+    id delegate = [[UIApplication sharedApplication] delegate];
+    
+    if ([delegate respondsToSelector:@selector(managedObjectContext)]) {
+        context = [delegate managedObjectContext];
+    }
+    return context;
+}
+
 @end
